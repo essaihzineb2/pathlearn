@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # Base de données pour Course Service
+  course-db:
+    image: mariadb:11.2
+    container_name: pathlearn-course-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: course_db
+      MYSQL_USER: courseuser
+      MYSQL_PASSWORD: coursepass
+    ports:
+      - "3307:3306"
+    volumes:
+      - course-db-data:/var/lib/mysql
+      - ./docker/init-scripts/course-db-init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - pathlearn-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de données pour Enrollment Service
+  enrollment-db:
+    image: mariadb:11.2
+    container_name: pathlearn-enrollment-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: enrollment_db
+      MYSQL_USER: enrollmentuser
+      MYSQL_PASSWORD: enrollmentpass
+    ports:
+      - "3308:3306"
+    volumes:
+      - enrollment-db-data:/var/lib/mysql
+      - ./docker/init-scripts/enrollment-db-init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - pathlearn-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service de gestion des cours
+  course-service:
+    build:
+      context: ./course-service
+      dockerfile: Dockerfile
+    container_name: pathlearn-course-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mariadb://course-db:3306/course_db
+      SPRING_DATASOURCE_USERNAME: courseuser
+      SPRING_DATASOURCE_PASSWORD: coursepass
+      SERVER_PORT: 8080
+    ports:
+      - "8081:8080"
+    depends_on:
+      course-db:
+        condition: service_healthy
+    networks:
+      - pathlearn-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Service de gestion des inscriptions
+  enrollment-service:
+    build:
+      context: ./enrollment-service
+      dockerfile: Dockerfile
+    container_name: pathlearn-enrollment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mariadb://enrollment-db:3306/enrollment_db
+      SPRING_DATASOURCE_USERNAME: enrollmentuser
+      SPRING_DATASOURCE_PASSWORD: enrollmentpass
+      SERVER_PORT: 8080
+      COURSE_SERVICE_URL: http://course-service:8080
+      JWT_SECRET: pathlearn-secret-key-change-in-production
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "8082:8080"
+    depends_on:
+      enrollment-db:
+        condition: service_healthy
+      course-service:
+        condition: service_healthy
+    networks:
+      - pathlearn-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  pathlearn-network:
+    driver: bridge
+
+volumes:
+  course-db-data:
+  enrollment-db-data:

@@ -1,0 +1,58 @@
+services:
+  # Base de données Enrollment Service
+  enrollment-db:
+    platform: linux/amd64
+    image: postgres:15-alpine
+    container_name: pathlearn-enrollment-db
+    environment:
+      POSTGRES_DB: auth_microservice
+      POSTGRES_USER: pathlearn_user
+      POSTGRES_PASSWORD: pathlearn_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - enrollment-db-data:/var/lib/postgresql/data
+    networks:
+      - pathlearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pathlearn_user -d auth_microservice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Enrollment Service (Projet de Mohamed)
+  enrollment-service:
+    build:
+      context: ./enrollment-service
+      dockerfile: Dockerfile
+    container_name: pathlearn-enrollment-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://enrollment-db:5432/auth_microservice
+      SPRING_DATASOURCE_USERNAME: pathlearn_user
+      SPRING_DATASOURCE_PASSWORD: pathlearn_pass
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver          # ← AJOUTE
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect  # ← AJOUTE
+      SERVER_PORT: 8081
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "8081:8081"
+    depends_on:
+      enrollment-db:
+        condition: service_healthy
+    networks:
+      - pathlearn-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  pathlearn-network:
+    driver: bridge
+
+volumes:
+  enrollment-db-data:

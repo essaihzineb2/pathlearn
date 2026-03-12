@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+!build/libs/*.jar
+gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Tests
+src/test/
+
+# OS
+.DS_Store
+Thumbs.db
