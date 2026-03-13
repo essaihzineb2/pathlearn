@@ -1,0 +1,120 @@
+# Walkthrough — CRUD Inscriptions + Progression
+
+## ✅ Build Status
+```
+BUILD SUCCESSFUL in 7s
+1 actionable task: 1 executed
+```
+
+---
+
+## Fichiers créés / modifiés
+
+### 🗄️ Base de données
+| Fichier | Description |
+|---|---|
+| [schema_inscriptions.sql](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/resources/schema_inscriptions.sql) | Script SQL à exécuter dans MySQL pour créer les 3 nouvelles tables |
+
+### 📦 Models (Entités JPA)
+| Fichier | Description |
+|---|---|
+| [Formation.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/model/Formation.java) | Cours disponibles (titre, description, durée) |
+| [Inscription.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/model/Inscription.java) | Liaison User ↔ Formation avec statut (ACTIVE/ANNULEE/TERMINEE) |
+| [Progression.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/model/Progression.java) | Avancement 0-100% sur une Inscription |
+
+### 🔑 Repositories
+| Fichier | Méthodes clés |
+|---|---|
+| [FormationRepository.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/repository/FormationRepository.java) | `findAll`, `findById` |
+| [InscriptionRepository.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/repository/InscriptionRepository.java) | [findByUserId](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/repository/InscriptionRepository.java#11-12), [existsByUserIdAndFormationId](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/repository/InscriptionRepository.java#15-16) |
+| [ProgressionRepository.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/repository/ProgressionRepository.java) | [findByInscriptionId](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/repository/ProgressionRepository.java#11-12) |
+
+### 📋 DTOs
+| Fichier | Usage |
+|---|---|
+| [FormationDTO.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/dto/FormationDTO.java) | Créer / mettre à jour une Formation |
+| [InscriptionRequestDTO.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/dto/InscriptionRequestDTO.java) | S'inscrire (envoi du `formationId`) |
+| [InscriptionStatutDTO.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/dto/InscriptionStatutDTO.java) | Changer le statut d'une Inscription |
+| [ProgressionDTO.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/dto/ProgressionDTO.java) | Créer / mettre à jour la Progression |
+
+### ⚙️ Services
+| Fichier | Rôle |
+|---|---|
+| [FormationService.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/service/FormationService.java) | CRUD formations |
+| [InscriptionService.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/service/InscriptionService.java) | CRUD inscriptions + vérification doublons |
+| [ProgressionService.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/service/ProgressionService.java) | Upsert progression (crée ou met à jour) |
+
+### 🌐 Controllers (Endpoints REST)
+| Fichier | Base URL |
+|---|---|
+| [FormationController.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/controller/FormationController.java) | `/api/formations` |
+| [InscriptionController.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/controller/InscriptionController.java) | `/api/inscriptions` |
+| [ProgressionController.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/controller/ProgressionController.java) | `/api/progressions` |
+
+### 🔒 Sécurité
+| Fichier | Changements |
+|---|---|
+| [SecurityConfig.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/config/SecurityConfig.java) | Nouvelles règles + `@EnableMethodSecurity` + fix Spring Security 6.3+ API |
+| [ResourceNotFoundException.java](file:///c:/Users/asus/Desktop/projet_benazouz/projet/src/main/java/org/example/projet/exception/ResourceNotFoundException.java) | Ajout des constructeurs manquants |
+
+---
+
+## 🔗 Tableau des endpoints
+
+### Formations
+| Méthode | URL | Accès | Description |
+|---|---|---|---|
+| `GET` | `/api/formations` | Public | Lister toutes les formations |
+| `GET` | `/api/formations/{id}` | Public | Voir une formation |
+| `POST` | `/api/formations` | ADMIN | Créer une formation |
+| `PUT` | `/api/formations/{id}` | ADMIN | Modifier une formation |
+| `DELETE` | `/api/formations/{id}` | ADMIN | Supprimer une formation |
+
+### Inscriptions
+| Méthode | URL | Accès | Description |
+|---|---|---|---|
+| `GET` | `/api/inscriptions/me` | Authentifié | Mes inscriptions |
+| `GET` | `/api/inscriptions` | ADMIN | Toutes les inscriptions |
+| `POST` | `/api/inscriptions` | Authentifié | S'inscrire à une formation |
+| `PUT` | `/api/inscriptions/{id}/statut` | Authentifié | Changer statut |
+| `DELETE` | `/api/inscriptions/{id}` | Authentifié | Se désinscrire |
+
+### Progression
+| Méthode | URL | Accès | Description |
+|---|---|---|---|
+| `GET` | `/api/progressions/{inscriptionId}` | Authentifié | Voir ma progression |
+| `POST` | `/api/progressions/{inscriptionId}` | Authentifié | Créer/MAJ progression |
+| `DELETE` | `/api/progressions/{id}` | Authentifié | Supprimer progression |
+
+---
+
+## ⚠️ Étape manuelle requise
+
+> [!IMPORTANT]
+> Avant de démarrer l'application, exécutez le script SQL dans votre base de données MySQL :
+> ```sql
+> USE votre_base_de_données;
+> SOURCE schema_inscriptions.sql;
+> ```
+> Ou copiez-collez le contenu du fichier directement dans votre client MySQL (Workbench, DBeaver, etc.)
+
+---
+
+## 🧪 Test rapide avec Postman
+
+```
+1. POST /api/auth/signin → récupérer le token JWT
+
+2. GET /api/formations → voir les formations (pas de token requis)
+
+3. POST /api/inscriptions
+   Header: Authorization: Bearer <token>
+   Body: { "formationId": 1 }
+
+4. POST /api/progressions/1
+   Header: Authorization: Bearer <token>
+   Body: { "pourcentage": 50, "notes": "Chapitre 1 terminé" }
+
+5. GET /api/inscriptions/me
+   Header: Authorization: Bearer <token>
+```
